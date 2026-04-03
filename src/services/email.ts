@@ -1,10 +1,16 @@
 import nodemailer from "nodemailer";
+import dns from "dns";
 import dotenv from "dotenv";
 
 dotenv.config();
 
+// Force IPv4 — Render free tier blocks outbound IPv6 to Gmail SMTP
+dns.setDefaultResultOrder("ipv4first");
+
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
