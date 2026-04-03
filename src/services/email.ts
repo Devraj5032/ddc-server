@@ -13,12 +13,12 @@ const transporter = nodemailer.createTransport({
 
 export async function sendOtpEmail(to: string, code: string): Promise<void> {
   await transporter.sendMail({
-    from: `"Daily Drink Companion" <${process.env.GMAIL_USER}>`,
+    from: `"Drink Now" <${process.env.GMAIL_USER}>`,
     to,
     subject: `Your login code: ${code}`,
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 400px; margin: 0 auto; padding: 32px;">
-        <h2 style="color: #6C3CE1; margin-bottom: 8px;">Daily Drink Companion</h2>
+        <h2 style="color: #6C3CE1; margin-bottom: 8px;">Drink Now</h2>
         <p style="color: #555; font-size: 16px;">Your verification code is:</p>
         <div style="background: #F3E8FF; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
           <span style="font-size: 36px; font-weight: 800; color: #6C3CE1; letter-spacing: 8px;">${code}</span>
