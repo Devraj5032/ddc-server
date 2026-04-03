@@ -1,72 +1,13 @@
-import nodemailer from "nodemailer";
-import net from "net";
+import { Resend } from "resend";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Force IPv4 connection — Render free tier blocks IPv6 outbound
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  // Force IPv4 socket
-  connection: undefined,
-  tls: {
-    rejectUnauthorized: false,
-  },
-  // Custom socket factory that forces IPv4
-  customTransport: undefined,
-} as any);
-
-// Override the socket creation to force IPv4
-const origConnect = (transporter as any).transporter?._connect;
-if (origConnect) {
-  (transporter as any).transporter._connect = function (this: any, ...args: any[]) {
-    if (args[0]) args[0].family = 4;
-    return origConnect.apply(this, args);
-  };
-}
-
-// Alternative: directly resolve Gmail SMTP to IPv4 and use that
-import dns from "dns";
-dns.setDefaultResultOrder("ipv4first");
-
-// Fallback: create transporter with resolved IPv4 address
-async function getIPv4Transporter() {
-  return new Promise<nodemailer.Transporter>((resolve, reject) => {
-    dns.resolve4("smtp.gmail.com", (err, addresses) => {
-      if (err || !addresses.length) {
-        // Fallback to hostname
-        resolve(transporter);
-        return;
-      }
-      const ipv4Transport = nodemailer.createTransport({
-        host: addresses[0], // Use direct IPv4 address
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
-        },
-        tls: {
-          rejectUnauthorized: false,
-          servername: "smtp.gmail.com", // Required for TLS with IP
-        },
-      });
-      resolve(ipv4Transport);
-    });
-  });
-}
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendOtpEmail(to: string, code: string): Promise<void> {
-  const transport = await getIPv4Transporter();
-
-  await transport.sendMail({
-    from: `"Drink Now" <${process.env.GMAIL_USER}>`,
+  await resend.emails.send({
+    from: "Drink Now <onboarding@resend.dev>",
     to,
     subject: `Your login code: ${code}`,
     html: `
