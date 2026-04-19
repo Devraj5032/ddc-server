@@ -5,6 +5,7 @@ import { ingredientRoutes } from "./routes/ingredients";
 import { drinkRoutes } from "./routes/drinks";
 import { analyticsRoutes } from "./routes/analytics";
 import { authRoutes } from "./routes/auth";
+import { authenticate } from "./middleware/auth";
 
 dotenv.config();
 
@@ -13,9 +14,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/ingredients", ingredientRoutes);
-app.use("/api/drinks", drinkRoutes);
-app.use("/api/analytics", analyticsRoutes);
+// Protected routes — require valid JWT
+app.use("/api/ingredients", authenticate, ingredientRoutes);
+app.use("/api/drinks", authenticate, drinkRoutes);
+app.use("/api/analytics", authenticate, analyticsRoutes);
+
+// Public routes — no auth needed
 app.use("/api/auth", authRoutes);
 
 app.get("/api/health", (_req, res) => {

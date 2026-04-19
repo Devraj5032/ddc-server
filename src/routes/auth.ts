@@ -3,6 +3,7 @@ import { eq, and, gt } from "drizzle-orm";
 import { db } from "../db";
 import { users, otpCodes } from "../db/schema";
 import { sendOtpEmail } from "../services/email";
+import { signToken, authenticate } from "../middleware/auth";
 
 const router = Router();
 
@@ -92,27 +93,26 @@ router.post("/verify-otp", async (req: Request, res: Response) => {
     user = newUser;
   }
 
-  res.json({ ok: true, user: formatUser(user) });
+  const token = signToken({ userId: user.id, email: user.email });
+  res.json({ ok: true, user: formatUser(user), token });
 });
 
-// GET /api/auth/me?email=user@example.com
-router.get("/me", async (req: Request, res: Response) => {
-  const email = (req.query.email as string || "").toLowerCase().trim();
-  if (!email) return res.status(400).json({ error: "Email required" });
+// GET /api/auth/me
+router.get("/me", authenticate, async (req: Request, res: Response) => {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, req.user!.userId))
+    .limit(1);
 
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (!user) return res.status(404).json({ error: "User not found" });
 
   res.json(formatUser(user));
 });
 
 // PUT /api/auth/profile
-router.put("/profile", async (req: Request, res: Response) => {
-  const { email, name, phone, dateOfBirth, bio, avatarUrl, preferenceAlcoholic } = req.body;
-
-  if (!email) return res.status(400).json({ error: "Email required" });
-
-  const normalizedEmail = email.toLowerCase().trim();
+router.put("/profile", authenticate, async (req: Request, res: Response) => {
+  const { name, phone, dateOfBirth, bio, avatarUrl, preferenceAlcoholic } = req.body;
 
   const updateData: any = { updatedAt: new Date() };
   if (name !== undefined) updateData.name = name;
@@ -125,7 +125,7 @@ router.put("/profile", async (req: Request, res: Response) => {
   const [updated] = await db
     .update(users)
     .set(updateData)
-    .where(eq(users.email, normalizedEmail))
+    .where(eq(users.id, req.user!.userId))
     .returning();
 
   if (!updated) return res.status(404).json({ error: "User not found" });
